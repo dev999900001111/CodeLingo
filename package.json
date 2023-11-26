@@ -1,0 +1,32 @@
+{
+  "name": "code-lingo",
+  "version": "1.0.0",
+  "description": "A translation tool dedicated to source code comments, utilizing ChatGPT for accurate and diverse language support.",
+  "main": "dist/app/cli.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w"
+  },
+  "bin": {
+    "code-lingo": "./dist/app/cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dev999900001111/CodeLingo.git"
+  },
+  "author": "dev999900001111",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dev999900001111/CodeLingo/issues"
+  },
+  "homepage": "https://github.com/dev999900001111/CodeLingo#readme",
+  "dependencies": {
+    "https-proxy-agent": "^7.0.2",
+    "openai": "^4.20.0",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@types/yargs": "^17.0.32"
+  }
+}
