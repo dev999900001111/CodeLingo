@@ -11,12 +11,6 @@ CodeLingo is a CLI tool that automatically translates comments in source code. L
 - **Easy CLI Usage**: Intuitive operation via command line.
 - **Flexible File Specification**: Specify individual files or directories for translation.
 
-## Installation
-
-```bash
-npm install -g code-lingo
-```
-
 ## Usage
 
 ```bash
