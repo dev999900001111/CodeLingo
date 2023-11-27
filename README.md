@@ -8,7 +8,6 @@ CodeLingo is a CLI tool developed to address this issue. It helps individual dev
 
 CodeLingo is a CLI tool that extracts only the comments from source code, translates them using ChatGPT, and replaces the original comments.
 
-
 ## Features
 
 - **Multilingual Translation**: Translation capabilities for numerous programming languages.
@@ -16,6 +15,7 @@ CodeLingo is a CLI tool that extracts only the comments from source code, transl
 - **Simple CLI Operations**: Intuitively usable from the command line.
 - **Flexible File Specification**: Translate individual files or entire directories.
 - **Rapid Syntax Parsing**: No delay in syntax parsing as it does not use AST.
+- **Cache Function**: Cache translated comments to save consumption tokens.
 
 ## How to Use
 
@@ -26,15 +26,11 @@ node dist/app/cli.js --help # Display help
 node dist/app/cli.js --language [Translation Language (English/Japanese/Chinese...)] --file-or-directory [File/Directory] --output-dir [Output Directory]
 ```
 
-## Translation Languages
+When executed, the specified file or directory's comments will be translated, and the translated files will be output to the output directory.
 
-Utilizing ChatGPT (gpt-3.5-turbo) translation capabilities, it supports multiple languages, including English, Spanish, French, German, Portuguese, Italian, Dutch, Russian, Arabic, and Chinese.
+In the translated-cache directory, translated comments are cached. If translated comments are already cached, the cache will be used.
 
-The "Translation Language" specified in --language will be embedded and translated in the following prompt.
-
-```markdown
-Translate the comments into ${targetLanguage}. Please return the comments that are originally in ${targetLanguage} as is. Be careful not to change the presence of newline characters.
-```
+To delete the translated comments from the cache, please remove the translated-cache directory.
 
 ## Supported Programming Languages
 
@@ -63,6 +59,32 @@ Files without extensions will not be translated as it determines based on file e
 - Swift (.swift) # May not translate correctly if there are nested comments
 - SQL (.sql)
 - TypeScript (.ts, .tsx)
+
+## Translation Languages
+
+Utilizing ChatGPT (gpt-3.5-turbo) translation capabilities, it supports multiple languages, including English, Spanish, French, German, Portuguese, Italian, Dutch, Russian, Arabic, and Chinese.
+
+The "Translation Language" specified in --language will be embedded and translated in the following prompt.
+
+```markdown
+Translate the comments into ${targetLanguage}. Please return the comments that are originally in ${targetLanguage} as is. Be careful not to change the presence of newline characters.
+```
+
+## Log Format
+
+In the current version, the log is output in the following format. By sorting, you can match the comments before and after translation.
+
+```log
+Translate:[md5hash]:[req/res]:[stack count]:comment
+```
+
+*This format is provisional and may change in the future.
+
+## Caution
+
+Occasionally, the OpenAI API may stall. (*This is particularly noticeable when the number of targeted comments exceeds 100.) In such cases, terminate the process with Ctrl+C and execute it again.
+
+When re-executing, the cache will be used, which can help reduce stalling.
 
 ## Contributions
 

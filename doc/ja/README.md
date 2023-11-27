@@ -15,6 +15,7 @@ CodeLingoは、ソースコードのコメントのみを抜き出して、ChatG
 - **簡単なCLI操作**: コマンドラインから直感的に使用可能。
 - **柔軟なファイル指定**: 個別のファイルまたはディレクトリを指定して翻訳。
 - **高速な構文解析**: ASTを利用しないため、構文解析に時間がかかりません。
+- **キャッシュ機能**: 翻訳済みのコメントをキャッシュして、消費トークンを節約します。
 
 ## 使用方法
 
@@ -25,15 +26,12 @@ node dist/app/cli.js --help # ヘルプを表示
 node dist/app/cli.js --language [翻訳言語(English/Japanese/Chinese...)] --file-or-directory [ファイル/ディレクトリ] --output-dir [出力ディレクトリ]
 ```
 
-## 翻訳言語
+実行すると、指定したファイルまたはディレクトリ内のコメントが翻訳され、出力ディレクトリに翻訳後のファイルが出力されます。
 
-ChatGPT（gpt-3.5-turbo）の翻訳機能を使用するので、英語、スペイン語、フランス語、ドイツ語、ポルトガル語、イタリア語、オランダ語、ロシア語、アラビア語、中国語を含む複数の言語に対応しています。
+translated-cacheディレクトリには、翻訳済みのコメントがキャッシュされます。
+翻訳済みのコメントがキャッシュされている場合、キャッシュを使用します。
 
---languageに指定した"翻訳言語"は、以下のプロンプトの${targetLanguage}に埋め込まれて翻訳されます。
-
-```markdown
-Translate the comments into ${targetLanguage}. Please return the comments that are originally in ${targetLanguage} as is. Be careful not to change the presence of newline characters.
-```
+翻訳済みのコメントをキャッシュから削除する場合は、translated-cacheディレクトリを削除してください。
 
 ## 対応プログラミング言語
 
@@ -62,6 +60,33 @@ Translate the comments into ${targetLanguage}. Please return the comments that a
 - Swift (.swift) # コメントのネストがある場合は正しく翻訳されない
 - SQL (.sql)
 - TypeScript (.ts, .tsx)
+
+## 翻訳言語
+
+ChatGPT（gpt-3.5-turbo）の翻訳機能を使用するので、英語、スペイン語、フランス語、ドイツ語、ポルトガル語、イタリア語、オランダ語、ロシア語、アラビア語、中国語を含む複数の言語に対応しています。
+
+--languageに指定した"翻訳言語"は、以下のプロンプトの${targetLanguage}に埋め込まれて翻訳されます。
+
+```markdown
+Translate the comments into ${targetLanguage}. Please return the comments that are originally in ${targetLanguage} as is. Be careful not to change the presence of newline characters.
+```
+
+## ログフォーマット
+
+現在のバージョンではログは、以下のフォーマットで出力されます。ソートすることで、翻訳前後のコメントを対応させることができます。
+
+```log
+Translate:[md5hash]:[req/res]:[stack count]:comment
+```
+
+※このフォーマットは暫定的なものであり、今後変更される可能性があります。
+
+## 注意事項
+
+時折OpenAIのAPIがスタックすることがあります。（※対象コメント数が100件以上の場合に特に顕著に現れます。）
+その場合は、Ctrl+Cでプロセスを終了し、再度実行してください。
+
+再実行時はキャッシュが使用されるため、スタックが軽減されます。
 
 ## 貢献
 

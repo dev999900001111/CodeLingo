@@ -4,10 +4,15 @@ import { ChatCompletion } from 'openai/resources';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as crypto from 'crypto';
 
 const openai = new OpenAI({
     apiKey: process.env['OPENAI_API_KEY'],
+    timeout: 60000,
 });
+
+// 翻訳済みの文字列をキャッシュするためのオブジェクト
+const translateMap: { [key: string]: string } = {};
 
 // 言語ごとの文字、文字列括弧とコメントの開始文字列と終了文字列のセット
 const quoteSet: { [key: string]: string[][][] } = {
@@ -138,9 +143,9 @@ async function analyzeSourceFile(
         if (forceCopy && outputFileName) {
             const buffer = await fs.promises.readFile(fileName);
             await fs.promises.writeFile(outputFileName, buffer);
-            console.log(`Not supported file extension: ${ext} so Copied ${fileName} to ${outputFileName}`);
+            console.log(`Not supported file extension:[${ext}] so Copied ${fileName} to ${outputFileName}`);
         } else {
-            console.error(`Not supported file extension: ${ext}`);
+            console.error(`Not supported file extension:[${ext}] ${fileName}`);
         }
         return;
     }
@@ -198,26 +203,35 @@ async function analyzeSourceCode(baseString: string, ext: string, targetLanguage
             if (end === hitChecker.bytesSet[1]) {
                 if (hitChecker.iKwType === 1) {
                     const translateTarget = baseString.substring(startIndex, idx + hitChecker.bytesSet[1].length);
-                    // console.log(`Translate: ${translateTarget}`);
-                    counter++;
-                    // コメントの場合は翻訳する。
-                    stringList.push({
-                        promise: (openai.chat.completions.create({
-                            model: 'gpt-3.5-turbo',
-                            temperature: 0.0,
-                            messages: [
-                                { role: 'system', content: `Translate the comments into ${targetLanguage}.\n- Please return the comments that are originally in ${targetLanguage} as is.\n- If you believe it is the source code of a program, please return it as is.\n- Be careful not to change the presence of newline characters.` },
-                                { role: 'user', content: translateTarget },
-                            ],
-                        }, options) as APIPromise<ChatCompletion>)
-                            .withResponse()
-                            .then(response => {
-                                counter--;
-                                // console.log(`counter: ${counter}`);
-                                return response.data.choices[0].message.content || ''
-                            }),
-                        checker: hitChecker
-                    });
+                    if (translateTarget in translateMap) {
+                        stringList.push({ promise: Promise.resolve(translateMap[translateTarget]), checker: null });
+                    } else {
+                        // md5でハッシュ値を計算する。
+                        const argsHash = crypto.createHash('MD5').update(translateTarget).digest('hex');
+                        console.log(`Translate:${argsHash}:req:${counter}:${translateTarget.replace(/\r/g, '\\r').replace(/\n/g, '\\n')}`);
+                        counter++;
+                        // コメントの場合は翻訳する。
+                        stringList.push({
+                            promise: (openai.chat.completions.create({
+                                model: 'gpt-3.5-turbo',
+                                temperature: 0.0,
+                                messages: [
+                                    { role: 'system', content: `Translate the comments into ${targetLanguage}.\n- Please return the comments that are originally in ${targetLanguage} as is.\n- If you believe it is the source code of a program, please return it as is.\n- Be careful not to change the presence of newline characters.` },
+                                    { role: 'user', content: translateTarget },
+                                ],
+                            }, options) as APIPromise<ChatCompletion>)
+                                .withResponse()
+                                .then(response => {
+                                    counter--;
+                                    // console.log(`counter: ${counter}`);
+                                    const result = response.data.choices[0].message.content || '';
+                                    console.log(`Translate:${argsHash}:res:${counter}:${result.replace(/\r/g, '\\r').replace(/\n/g, '\\n')}`);
+                                    translateMap[translateTarget] = result;
+                                    return result;
+                                }),
+                            checker: hitChecker
+                        });
+                    }
                 } else {
                     // リテラルの場合はそのまま返す。
                     stringList.push({ promise: Promise.resolve(baseString.substring(startIndex, idx + hitChecker.bytesSet[1].length)), checker: null });
@@ -374,16 +388,37 @@ export function main(
         if (counter === 0) {
             clearInterval(logWatchInterval);
         } else {
-            console.log(`${new Date().toLocaleString()} waiting: ${counter} sentences`);
+            console.log(`${new Date().toLocaleString()} waiting: ${counter} comments`);
         }
     }, 5000);
 
+
+    // キャッシュファイルのパス
+    const cacheFilePath = 'translated-cache/translateMap.json';
+    // キャッシュ用のディレクトリを作成する。
+    fs.mkdirSync('translated-cache', { recursive: true });
+    // キャッシュを読み込む。
+    let _translateMap: { [key: string]: string } = {};
+    try {
+        const translateMapString = fs.readFileSync(cacheFilePath, 'utf8');
+        _translateMap = JSON.parse(translateMapString);
+    } catch (e) {
+        _translateMap = {};
+    }
+    // キャッシュをグローバル変数にセットする。
+    Object.assign(translateMap, _translateMap);
+
+
+    //　翻訳処理を実行する。
     const all = targetDirectory.map(dir => getDeepList(dir)).flat().map(file => {
         const outputFileName = path.join(outputDir, file.replace(/^[.\\\/]*/g, ''));
         return analyzeSourceFile(file, targetLanguage, outputFileName, specifyProgrammingLanguage, forceCopy);
     })
+
+    // 翻訳処理が終わったらキャッシュを保存する。
     Promise.all(all).then(() => {
         console.log(`${new Date().toLocaleString()} Finished`);
+        fs.writeFileSync(cacheFilePath, JSON.stringify(translateMap, null, 2));
         clearInterval(logWatchInterval);
     });
 }
