@@ -70,9 +70,11 @@ const quoteSet: { [key: string]: string[][][] } = {
 };
 quoteSet['c'] = quoteSet['java'];
 quoteSet['cpp'] = quoteSet['java'];
+quoteSet['csh'] = quoteSet['java'];
 quoteSet['h'] = quoteSet['java'];
 quoteSet['hpp'] = quoteSet['java'];
 quoteSet['cs'] = quoteSet['java'];
+quoteSet['dart'] = quoteSet['java'];
 quoteSet['scala'] = quoteSet['java'];
 quoteSet['scss'] = quoteSet['java'];
 quoteSet['sass'] = quoteSet['java'];
@@ -81,16 +83,30 @@ quoteSet['go'] = quoteSet['java'];
 quoteSet['swift'] = quoteSet['java']; // ネストができないので、コメントのネストがある場合はエラーになる。
 quoteSet['kt'] = quoteSet['java'];
 quoteSet['kts'] = quoteSet['java'];
+quoteSet['rs'] = quoteSet['java'];
 quoteSet['ts'] = quoteSet['js'];
 quoteSet['tsx'] = quoteSet['js'];
 quoteSet['jsx'] = quoteSet['js'];
 quoteSet['htm'] = quoteSet['html'];
+quoteSet['pm'] = quoteSet['pl'];
+quoteSet['t'] = quoteSet['pl'];
 quoteSet['pyc'] = quoteSet['py'];
 quoteSet['cl'] = quoteSet['lisp'];
+quoteSet['clisp'] = quoteSet['lisp'];
+quoteSet['el'] = quoteSet['lisp'];
 quoteSet['lsp'] = quoteSet['lisp'];
 quoteSet['plm'] = quoteSet['pl'];
+quoteSet['bash'] = quoteSet['sh'];
+quoteSet['zsh'] = quoteSet['sh'];
+quoteSet['fish'] = quoteSet['sh'];
 
-async function analyzeSourceFile(fileName: string, language: string, outputFileName?: string): Promise<void> {
+async function analyzeSourceFile(
+    fileName: string,
+    language: string,
+    outputFileName?: string,
+    specifyProgrammingLanguage?: string,
+    forceCopy?: boolean,
+): Promise<string | void> {
     if (!process.env['OPENAI_API_KEY']) {
         console.error('Please set OPENAI_API_KEY environment variable.');
         return;
@@ -115,9 +131,11 @@ async function analyzeSourceFile(fileName: string, language: string, outputFileN
         }
     } else {/* 何もしない */ }
 
-    const ext = (fileName.split('.').pop() || '').toLowerCase();
+    // 拡張子を取得する。
+    const ext = specifyProgrammingLanguage || (fileName.split('.').pop() || '').toLowerCase();
     if (!quoteSet[ext]) {
-        if (outputFileName) {
+        // 対応していない拡張子の場合、かつforceCopyがtrueの場合は、ファイルコピーだけする。
+        if (forceCopy && outputFileName) {
             const buffer = await fs.promises.readFile(fileName);
             await fs.promises.writeFile(outputFileName, buffer);
             console.log(`Not supported file extension: ${ext} so Copied ${fileName} to ${outputFileName}`);
@@ -128,7 +146,7 @@ async function analyzeSourceFile(fileName: string, language: string, outputFileN
     }
 
     const fileBuffer = await fs.promises.readFile(fileName, 'utf8');
-    analyzeSourceCode(fileBuffer, ext, language)
+    return analyzeSourceCode(fileBuffer, ext, language)
         .then((result) => {
             if (outputFileName) {
                 fs.promises.writeFile(outputFileName, result);
@@ -139,6 +157,7 @@ async function analyzeSourceFile(fileName: string, language: string, outputFileN
             }
         });
 }
+let counter = 0;
 /**
  * ソースコードを解析して、コメントを英語に翻訳する。
  * @param baseString ソースコード
@@ -180,6 +199,7 @@ async function analyzeSourceCode(baseString: string, ext: string, targetLanguage
                 if (hitChecker.iKwType === 1) {
                     const translateTarget = baseString.substring(startIndex, idx + hitChecker.bytesSet[1].length);
                     // console.log(`Translate: ${translateTarget}`);
+                    counter++;
                     // コメントの場合は翻訳する。
                     stringList.push({
                         promise: (openai.chat.completions.create({
@@ -191,7 +211,11 @@ async function analyzeSourceCode(baseString: string, ext: string, targetLanguage
                             ],
                         }, options) as APIPromise<ChatCompletion>)
                             .withResponse()
-                            .then(response => response.data.choices[0].message.content || ''),
+                            .then(response => {
+                                counter--;
+                                // console.log(`counter: ${counter}`);
+                                return response.data.choices[0].message.content || ''
+                            }),
                         checker: hitChecker
                     });
                 } else {
@@ -315,13 +339,36 @@ function getDeepList(dir: string, list: string[] = []): string[] {
  * @param targetDirectory 翻訳対象のディレクトリ
  * @param targetLanguage  翻訳先の言語
  * @param outputDir       翻訳結果の出力先ディレクトリ
+ * @param specifyProgrammingLanguage 拡張子による自動判別を使わずに、変換対象のプログラミング言語の拡張子を指定する
+ * @param forceCopy       対応していない拡張子の場合に、ファイルをコピーするかどうか。trueの場合はコピーする。
  */
-export function main(targetDirectory: string | string[] = '', targetLanguage: string = 'Japanese', outputDir: string = './translated') {
+export function main(
+    targetLanguage: string,
+    targetDirectory: string | string[] = './src/',
+    outputDir: string = './translated',
+    specifyProgrammingLanguage: string = 'java',
+    forceCopy: boolean = false,
+) {
     // 配列型に統一する
     if (Array.isArray(targetDirectory)) { } else { targetDirectory = [targetDirectory]; }
     console.log(`Translate all comments in the source code under the ${JSON.stringify(targetDirectory)} directory into ${targetLanguage} and output them to the "${outputDir}" directory`);
-    targetDirectory.map(dir => getDeepList(dir)).flat().forEach(file => {
+    console.log(`${new Date().toLocaleString()} start`);
+
+    // 5秒ごとに待機中のトランザクション数を表示する。
+    const logWatchInterval = setInterval(() => {
+        if (counter === 0) {
+            clearInterval(logWatchInterval);
+        } else {
+            console.log(`${new Date().toLocaleString()} waiting: ${counter} sentences`);
+        }
+    }, 5000);
+
+    const all = targetDirectory.map(dir => getDeepList(dir)).flat().map(file => {
         const outputFileName = path.join(outputDir, file.replace(/^[.\\\/]*/g, ''));
-        analyzeSourceFile(file, targetLanguage, outputFileName);
+        return analyzeSourceFile(file, targetLanguage, outputFileName, specifyProgrammingLanguage, forceCopy);
+    })
+    Promise.all(all).then(() => {
+        console.log(`${new Date().toLocaleString()} Finished`);
+        clearInterval(logWatchInterval);
     });
 }

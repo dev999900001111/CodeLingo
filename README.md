@@ -2,27 +2,68 @@
 
 ## Overview
 
-CodeLingo is a CLI tool that automatically translates comments in source code. Leveraging the power of ChatGPT for high-accuracy translations, it facilitates understanding and sharing of source code comments in multilingual development teams.
+CodeLingo is a CLI tool that extracts and translates comments from source code.
+
+Leveraging ChatGPT's highly accurate translation capabilities, it facilitates understanding and sharing of source code comments among multilingual development teams.
 
 ## Features
 
-- **Multilingual Translation**: Supports a wide range of languages for translation.
-- **Powered by ChatGPT**: Utilizes state-of-the-art AI for accurate translations.
-- **Easy CLI Usage**: Intuitive operation via command line.
-- **Flexible File Specification**: Specify individual files or directories for translation.
+- **Multilingual Translation**: Translation capabilities for numerous programming languages.
+- **Powered by ChatGPT**: Precise translations driven by cutting-edge AI.
+- **Simple CLI Operations**: Intuitively usable from the command line.
+- **Flexible File Specification**: Translate individual files or entire directories.
+- **Rapid Syntax Parsing**: No delay in syntax parsing as it does not use AST.
 
-## Usage
+## How to Use
 
 ```bash
 export OPENAI_API_KEY=[YOUR_OPENAI_API_KEY]
 npm run build
-node dist/app/cli.js # Display help
-node dist/app/cli.js --language [Translation Language] --file-or-directory [File/Directory] --output-dir [Output Directory]
+node dist/app/cli.js --help # Display help
+node dist/app/cli.js --language [Translation Language (English/Japanese/Chinese...)] --file-or-directory [File/Directory] --output-dir [Output Directory]
 ```
 
-## Contributing
+## Translation Languages
 
-Contributors are welcome to contribute to the project via GitHub Issues and Pull Requests. We welcome all forms of contributions, from feature suggestions to bug reports.
+Utilizing ChatGPT (gpt-3.5-turbo) translation capabilities, it supports multiple languages, including English, Spanish, French, German, Portuguese, Italian, Dutch, Russian, Arabic, and Chinese.
+
+The "Translation Language" specified in --language will be embedded and translated in the following prompt.
+
+```markdown
+Translate the comments into ${targetLanguage}. Please return the comments that are originally in ${targetLanguage} as is. Be careful not to change the presence of newline characters.
+```
+
+## Supported Programming Languages
+
+Files without extensions will not be translated as it determines based on file extensions.
+
+- C (.c, .h)
+- C++ (.cpp, .hpp)
+- C# (.cs)
+- CSS (.css, .scss, .sass, .less)
+- Dart (.dart)
+- Go (.go)
+- HTML (.html, .htm)
+- Haskell (.hs)
+- Java (.java, .scala, .groovy)
+- JavaScript (.js, .jsx)
+- JSP (.jsp)
+- Kotlin (.kt, .kts)
+- Lisp (.lisp, .lsp, .cl, .clisp, .el)
+- Lua (.lua)
+- Perl (.pl, .pm, .t)
+- PHP (.php)
+- Python (.py, .pyc)
+- Ruby (.rb)
+- Rust (.rs)
+- Shell (.sh, .bash, .csh, .zsh, .fish)
+- Swift (.swift) # May not translate correctly if there are nested comments
+- SQL (.sql)
+- TypeScript (.ts, .tsx)
+
+## Contributions
+
+Contributors can contribute to the project through GitHub Issues and Pull Requests. All forms of contributions, including new feature suggestions and bug reports, are welcome.
 
 ## License
 
