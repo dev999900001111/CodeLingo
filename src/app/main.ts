@@ -13,7 +13,7 @@ const openai = new OpenAI({
 const quoteSet: { [key: string]: string[][][] } = {
     java: [
         [['"', '"'], ["'", "'"]],
-        [['/*', '*/'], ['//', '\n']],
+        [['/*', '*/'], ['//', '\n']], //  ['{-', '-}'], ['--', '\n'], ['=begin', '=end'], ['#', '\n'], ['--[[', ']]'], ['--', '\n'], ['#|', '|#'], [';', '\n']
     ],
     js: [
         [['"', '"'], ["'", "'"], ['`', '`']],
@@ -206,7 +206,7 @@ async function analyzeSourceCode(baseString: string, ext: string, targetLanguage
                             model: 'gpt-3.5-turbo',
                             temperature: 0.0,
                             messages: [
-                                { role: 'system', content: `Translate the comments into ${targetLanguage}. Please return the comments that are originally in ${targetLanguage} as is. Be careful not to change the presence of newline characters.` },
+                                { role: 'system', content: `Translate the comments into ${targetLanguage}.\n- Please return the comments that are originally in ${targetLanguage} as is.\n- If you believe it is the source code of a program, please return it as is.\n- Be careful not to change the presence of newline characters.` },
                                 { role: 'user', content: translateTarget },
                             ],
                         }, options) as APIPromise<ChatCompletion>)
@@ -256,6 +256,8 @@ async function analyzeSourceCode(baseString: string, ext: string, targetLanguage
                             hitChecker = JSON.parse(JSON.stringify(checker)) as Checker;
                             hitChecker.iKwType = 0;
                         }
+                    } else {
+                        // python以外の場合は、iKwTypeを0にする。
                     }
                     idx = idx + hitChecker.bytesSet[1].length - 1;
                     break;
@@ -275,9 +277,22 @@ async function analyzeSourceCode(baseString: string, ext: string, targetLanguage
             return results.map((result, index) => {
                 const checker = stringList[index].checker;
                 if (checker) {
-                    // 開始文字列と終了文字列が消えていたら付け足す。
-                    if (!result.startsWith(checker.bytesSet[0])) { result = checker.bytesSet[0] + result; }
-                    if (!result.endsWith(checker.bytesSet[1])) { result = result + checker.bytesSet[1]; }
+                    // 開始文字列と終了文字列が正しくセットされていないことがあるので補正する。
+                    // 方針：終了文字列で分割して、分割された文字列それぞれで開始文字列の有無を判定して、無ければ付け足していき、最後に結合する。
+                    result = result.split(checker.bytesSet[1]).map((str, i) => {
+                        if (str.length > 0) {
+                            // 開始文字列で始まるかどうかを判定する。
+                            if (str.startsWith(checker.bytesSet[0])) {
+                                // 先頭に開始文字列がある場合は、何もしない。
+                            } else {
+                                // 先頭に開始文字列がない場合は、開始文字列を先頭に付け足す。
+                                str = checker.bytesSet[0] + str;
+                            }
+                            // 終了文字列はsplitで消えてしまっているので必ず付け足す。
+                            str = str + checker.bytesSet[1];
+                        } else { }
+                        return str;
+                    }).join('');
                     return result;
                 } else {
                     return result;

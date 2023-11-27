@@ -42,9 +42,9 @@ testem.log
 Thumbs.db
 
 # org
-/results
-/prompts_and_responses
-/bk
-history
+/results/
+/prompts_and_responses/
+/bk/
+/history/
 history.log
-translated
+/translated/
