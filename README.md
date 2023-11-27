@@ -2,9 +2,12 @@
 
 ## Overview
 
-CodeLingo is a CLI tool that extracts and translates comments from source code.
+In the open-source world, source code written in various languages is shared. However, understanding becomes a significant challenge when comments are written in different languages. Additionally, when sharing your own code widely, it is necessary to write comments in English.
 
-Leveraging ChatGPT's highly accurate translation capabilities, it facilitates understanding and sharing of source code comments among multilingual development teams.
+CodeLingo is a CLI tool developed to address this issue. It helps individual developers understand open-source code and provides the ability to translate comments into English for widespread sharing of their own code.
+
+CodeLingo is a CLI tool that extracts only the comments from source code, translates them using ChatGPT, and replaces the original comments.
+
 
 ## Features
 
