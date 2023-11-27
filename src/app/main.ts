@@ -383,16 +383,6 @@ export function main(
     console.log(`Translate all comments in the source code under the ${JSON.stringify(targetDirectory)} directory into ${targetLanguage} and output them to the "${outputDir}" directory`);
     console.log(`${new Date().toLocaleString()} start`);
 
-    // 5秒ごとに待機中のトランザクション数を表示する。
-    const logWatchInterval = setInterval(() => {
-        if (counter === 0) {
-            clearInterval(logWatchInterval);
-        } else {
-            console.log(`${new Date().toLocaleString()} waiting: ${counter} comments`);
-        }
-    }, 5000);
-
-
     // キャッシュファイルのパス
     const cacheFilePath = 'translated-cache/translateMap.json';
     // キャッシュ用のディレクトリを作成する。
@@ -408,6 +398,16 @@ export function main(
     // キャッシュをグローバル変数にセットする。
     Object.assign(translateMap, _translateMap);
 
+    // 1秒ごとにキャッシュを保存する。
+    const cacheSaveInterval = setInterval(() => {
+        fs.writeFileSync(cacheFilePath, JSON.stringify(translateMap, null, 2));
+        console.log(`${new Date().toLocaleString()} saved cache`);
+    }, 1000);
+
+    // 5秒ごとに待機中のトランザクション数を表示する。ついでにキャッシュを保存する。
+    const logWatchInterval = setInterval(() => {
+        console.log(`${new Date().toLocaleString()} waiting: ${counter} comments`);
+    }, 5000);
 
     //　翻訳処理を実行する。
     const all = targetDirectory.map(dir => getDeepList(dir)).flat().map(file => {
@@ -420,5 +420,6 @@ export function main(
         console.log(`${new Date().toLocaleString()} Finished`);
         fs.writeFileSync(cacheFilePath, JSON.stringify(translateMap, null, 2));
         clearInterval(logWatchInterval);
+        clearInterval(cacheSaveInterval);
     });
 }
