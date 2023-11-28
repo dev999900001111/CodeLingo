@@ -193,6 +193,15 @@ async function analyzeSourceCode(baseString: string, ext: string, targetLanguage
     let startIndex = -1;
     const stringList: { promise: Promise<string>, checker: Checker | null, cached: boolean }[] = [];
     for (let idx = 0; idx < baseString.length; idx++) {
+        if (['html', 'htm', 'css', 'scss', 'sass', 'less', 'sql'].includes(ext)) {
+            // html,css,scss,sass,less,sqlの場合は、エスケープ文字を無視する。
+        } else {
+            // それ以外の場合は、エスケープ文字がある場合はスキップする。
+            if (baseString[idx] === '\\') {
+                idx++;
+                continue;
+            } else {/* 何もしない */ }
+        }
         if (hitChecker) {
             // すでにヒットしている場合
             // 終了文字列があるかどうかを判定する。
