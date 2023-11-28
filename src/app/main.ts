@@ -174,6 +174,7 @@ async function analyzeSourceCode(baseString: string, ext: string, targetLanguage
 
     // 開始文字列と終了文字列のセットを結合してソートする。
     const checkerList = checkerSorter([literalQuote, commentQuote]);
+    // console.log(`checkerList:${JSON.stringify(checkerList)}`);
 
     // proxy設定判定用オブジェクト
     const proxyObj: { [key: string]: string | undefined } = {
@@ -247,7 +248,7 @@ async function analyzeSourceCode(baseString: string, ext: string, targetLanguage
                     // 開始文字列があった場合
                     hitChecker = checker;
                     startIndex = idx;
-                    if (['py', 'pyc'].includes(ext)) {
+                    if (['py', 'pyc'].includes(ext) && hitChecker.iKwType == 1 && hitChecker.iKwTypeSub < 2) {
                         // pythonの場合はブロックコメントかブロック文字列かを判定する
                         // ブロックコメントの場合は、開始文字列の前に改行があるかどうかを判定する。
                         let isBlockComment = true;
@@ -263,7 +264,7 @@ async function analyzeSourceCode(baseString: string, ext: string, targetLanguage
                         }
                         if (isBlockComment) {
                         } else {
-                            // ブロック文字列の場合は、iKwTypeを0にする。
+                            // ブロック文字列の場合は、iKwTypeを「0:文字列リテラル」にする。
                             hitChecker = JSON.parse(JSON.stringify(checker)) as Checker;
                             hitChecker.iKwType = 0;
                         }
@@ -332,7 +333,7 @@ function checkerSorter(checker: string[][][]): Checker[] {
     })));
 
     checkers.sort((a, b) => {
-        const delta = a.bytesSet[0].localeCompare(b.bytesSet[0]);
+        const delta = b.bytesSet[0].localeCompare(a.bytesSet[0]);
         return delta === 0 ? b.bytesSet[0].length - a.bytesSet[0].length : delta;
     });
 
