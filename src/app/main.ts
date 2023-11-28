@@ -190,7 +190,7 @@ async function analyzeSourceCode(baseString: string, ext: string, targetLanguage
 
     let hitChecker: Checker | null = null;
     let startIndex = -1;
-    const stringList: { promise: Promise<string>, checker: Checker | null }[] = [];
+    const stringList: { promise: Promise<string>, checker: Checker | null, cached: boolean }[] = [];
     for (let idx = 0; idx < baseString.length; idx++) {
         if (hitChecker) {
             // すでにヒットしている場合
@@ -200,7 +200,7 @@ async function analyzeSourceCode(baseString: string, ext: string, targetLanguage
                 if (hitChecker.iKwType === 1) {
                     const translateTarget = baseString.substring(startIndex, idx + hitChecker.bytesSet[1].length);
                     if (translateTarget in translateMap) {
-                        stringList.push({ promise: Promise.resolve(translateMap[translateTarget]), checker: null });
+                        stringList.push({ promise: Promise.resolve(translateMap[translateTarget]), checker: hitChecker, cached: true });
                     } else {
                         // md5でハッシュ値を計算する。
                         const argsHash = crypto.createHash('MD5').update(translateTarget).digest('hex');
@@ -225,12 +225,13 @@ async function analyzeSourceCode(baseString: string, ext: string, targetLanguage
                                     translateMap[translateTarget] = result;
                                     return result;
                                 }),
-                            checker: hitChecker
+                            checker: hitChecker,
+                            cached: false,
                         });
                     }
                 } else {
                     // リテラルの場合はそのまま返す。
-                    stringList.push({ promise: Promise.resolve(baseString.substring(startIndex, idx + hitChecker.bytesSet[1].length)), checker: null });
+                    stringList.push({ promise: Promise.resolve(baseString.substring(startIndex, idx + hitChecker.bytesSet[1].length)), checker: null, cached: false });
                 }
                 idx = idx + hitChecker.bytesSet[1].length - 1;
 
@@ -277,7 +278,7 @@ async function analyzeSourceCode(baseString: string, ext: string, targetLanguage
 
             if (hitChecker) {
             } else {
-                stringList.push({ promise: Promise.resolve(baseString[idx]), checker: null });
+                stringList.push({ promise: Promise.resolve(baseString[idx]), checker: null, cached: false });
             }
         }
     }
