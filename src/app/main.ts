@@ -112,10 +112,6 @@ async function analyzeSourceFile(
     specifyProgrammingLanguage?: string,
     forceCopy?: boolean,
 ): Promise<string | void> {
-    if (!process.env['OPENAI_API_KEY']) {
-        console.error('Please set OPENAI_API_KEY environment variable.');
-        return;
-    }
 
     // ファイルが存在するかどうかをチェックする。
     if (!fs.existsSync(fileName)) {
@@ -378,6 +374,12 @@ export function main(
     specifyProgrammingLanguage: string = 'java',
     forceCopy: boolean = false,
 ) {
+    // 環境変数のチェック
+    if (!process.env['OPENAI_API_KEY']) {
+        console.error('Please set OPENAI_API_KEY environment variable.');
+        return;
+    }
+
     // 配列型に統一する
     if (Array.isArray(targetDirectory)) { } else { targetDirectory = [targetDirectory]; }
     console.log(`Translate all comments in the source code under the ${JSON.stringify(targetDirectory)} directory into ${targetLanguage} and output them to the "${outputDir}" directory`);
